@@ -1,16 +1,19 @@
 /**
  * @fileOverview
- * Implements a simple REST api in an object. Use is for workers/masters to 
- * receive tasks/results from masters/workers.
+ * Implements a simple REST API in an object. Requests and responses are in
+ * JSON. Or are supposed to be.
  */
 'use strict';
 var http = require('http');
-var debug = require('debug')('sc:restapi');
+var debug = require('debug')('json-rest-api');
 var url = require('url');
 var util = require('util');
 var inspect = util.inspect;
 var is = require('is2');
 var asyncerr = require('async-err');
+
+// set a default port to listen for requests
+var DEFAULT_PORT = process.env.PORT ? process.env.PORT : 44401;
 
 exports.RestApi = RestApi;
 
@@ -18,7 +21,9 @@ exports.RestApi = RestApi;
  * RestApi constructor. Creates the HTTP server objects and starts listening on
  * the socket.
  * @param {Object} [config] An optional configuration object to configure the
- * RestApi.
+ * RestApi. Possible properties are: port and bindTo to specify the listening
+ * port and the address to bind to. If no port is specified the default is 44401
+ * and the default address is INADDR_ANY.
  * @param {Function} [cb] An optional callback.
  * @constructor
  */
@@ -27,7 +32,7 @@ function RestApi(config, cb) {
   self.routes = {};
 
   self.bindTo = (config && config.bindTo) ? config.bindTo : undefined;
-  self.port = (config && config.port) ? config.port : 44401;
+  self.port = (config && config.port) ? config.port : DEFAULT_PORT;
 
   // create teh http server object and on every request, try to match the
   // request with a known route. If there is no match, return a 404 error.
