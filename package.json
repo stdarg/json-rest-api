@@ -1,0 +1,33 @@
+{
+  "name": "json-rest-api",
+  "version": "0.0.0",
+  "description": "A lightweight REST API that receives and responds to JSON HTTP requests, supports all verbs. Very simple.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/stdarg/json-rest-api.git"
+  },
+  "keywords": [
+    "REST",
+    "HTTP",
+    "JSON",
+    "API",
+    "interface"
+  ],
+  "author": "Edmond Meinfelder",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stdarg/json-rest-api/issues"
+  },
+  "dependendcies": {
+    "async-err": "~0.0.0",
+    "debug": "~0.7.2",
+    "is2": "~0.0.5"
+  },
+  "devDependencies": {
+    "mocha": "~1.13.0"
+  }
+}
