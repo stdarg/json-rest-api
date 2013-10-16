@@ -17,13 +17,14 @@ the socket.
 #### Params: 
 
 * **Object** *[config]* An optional configuration object to configure the
-  server.  The configuration object is option and supports only two properties:
+  server.  The configuration object is optional and supports only two properties:
   * port - The number of the listening port. If there is no port, the environment
     variable PORT is used. If there is no PORT environment variable, the server
     listens on port 44401.
   * bindTo - The string address the socket should be bound to. If not specified,
     the default is INADDR_ANY, meaning the socket is bound to all interfaces.
-* **Function** *[cb]* An optional callback.
+* **Function** *[cb]* An optional callback. The callback executes once the
+  interface is ready receive and handle requests.
 
 ### addRoute(verb, path, function)
 Add a route/verb along with a function to run.
