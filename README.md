@@ -2,38 +2,98 @@ json-rest-api
 =============
 
 A lightweight REST API that receives and responds to JSON HTTP requests,
-supports all verbs. It's about as simple as it gets.
+supports all verbs. Expects JSON requests and responds in JSON via an added
+method to the http.ServerResponse object called `json` (see below).
 
 ## Installation
 
     npm install json-rest-api
 
 
+## Example
+
+### server
+
+    'use strict';
+    var JsonRestApi = require('../index').RestApi;
+    var inspect = require('util').inspect;
+    var debug = require('debug')('json-rest-api:example:server');
+
+    var RestApi = new JsonRestApi({port: 8000}, function(err) {
+      if (err) {
+        debug('/ping error: '+inspect(err));
+        return;
+      }
+      console.log('Listening on port 8000.');
+
+      // add a route
+      RestApi.addRoute('get', '/ping', function(req, res) {
+        res.json({success: true, pong: 'pong'});
+      });
+    });
+
+### client
+
+    'use strict';
+    var request = require('request');
+    var inspect = require('util').inspect;
+    var debug = require('debug')('json-rest-api:example:client');
+    var assert = require('assert');
+
+    request({json:true, uri: 'http://localhost:8000/ping'}, function(err, res, json) {
+      if (err) {
+        debug('Error: '+inspect(err));
+        return;
+      }
+
+      assert.ok(json.success === true);
+      assert.ok(json.pong === 'pong');
+      console.log('Success!');
+    });
+
 ## API
+
 ### RestApi([config], [cb])
-The constructor. Creates the HTTP server object and starts listening on
+RestApi constructor. Creates the HTTP server objects and starts listening on
 the socket.
 
-#### Params: 
-
+#### Params:
 * **Object** *[config]* An optional configuration object to configure the
-  server.  The configuration object is optional and supports only two properties:
-  * port - The number of the listening port. If there is no port, the environment
-    variable PORT is used. If there is no PORT environment variable, the server
-    listens on port 44401.
-  * bindTo - The string address the socket should be bound to. If not specified,
-    the default is INADDR_ANY, meaning the socket is bound to all interfaces.
-* **Function** *[cb]* An optional callback. The callback executes once the
-  interface is ready receive and handle requests.
+* **Function** *[cb]* An optional callback. If there is a callback, the process
+  will be begin listening on the socket for HTTP requests. Without a callback,
+  you must call listen explicitly.
 
-### addRoute(verb, path, function)
-Add a route/verb along with a function to run.
+### listen([cb])
+Start listening on the socket for HTTP requests.
 
-#### Params: 
+#### Params:
+* **Function** *[cb]* An optional callback called when the server is ready.
 
-* **String** *verb* HTTP verb for route.
+### stop([cb])
+Stops the server from acccepting new connections and listening on the port.
+
+#### Params:
+* **Function** *[cb]* The callback function. Optional.
+
+### addRoute(verb, path, func)
+Add a route along with a function to run.
+
+#### Params:
+* **String** *verb* HTTP verb for route. e.g.: 'get', 'post'.
 * **String** *path* A valid URI path.
-* **Function** *function* A function to run when teh path executes.
+* **Function** *func* A function to run when the path executes.
+
+#### Return:
+* **Boolean|Error** True, if no errors on the parameters, Error
+* **Error|Boolean** true on success and Error on failure.
+
+### json(Optional., Optional.)
+A method for the JsonServerResponse prototype to send json by passing an
+object.
+
+#### Params:
+* **Number|Object** *Optional.* First argument may be either the status
+* **Object** *Optional.* If the first object is the status code, then the
 
 ## LICENSE
 

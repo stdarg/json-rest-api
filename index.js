@@ -24,7 +24,8 @@ exports.RestApi = RestApi;
  * RestApi. Possible properties are: port and bindTo to specify the listening
  * port and the address to bind to. If no port is specified the default is 44401
  * and the default address is INADDR_ANY.
- * @param {Function} [cb] An optional callback.
+ * @param {Function} [cb] An optional callback. If there is a callback, the
+ * process will be begin listening on the socket for HTTP requests.
  * @constructor
  */
 function RestApi(config, cb) {
@@ -34,11 +35,10 @@ function RestApi(config, cb) {
   self.bindTo = (config && config.bindTo) ? config.bindTo : undefined;
   self.port = (config && config.port) ? config.port : DEFAULT_PORT;
 
-  // create teh http server object and on every request, try to match the
+  // create the HTTP server object and on every request, try to match the
   // request with a known route. If there is no match, return a 404 error.
   self.HttpServer = http.createServer(function(req, res) {
     var uriPath = url.parse(req.url).pathname;
-
     // try to match the request & method with a handler
     for (var path in self.routes[req.method]) {
       if (path === uriPath) {
@@ -48,52 +48,78 @@ function RestApi(config, cb) {
     }
 
     // no match was found, return a 404 error.
-    debug('No path matched request for:', uriPath);
     res.writeHead(404, {'Content-Type': 'application/json; charset=utf-8'});
     res.end('{status:404, message:"Content not found."}', 'utf8');
   });
 
+  if (cb) self.listen(cb);
+}
+
+/**
+ * Start listening on the socket for HTTP requests.
+ * @param {Function} [cb] An optional callback called when the server is ready.
+ */
+RestApi.prototype.listen = function(cb) {
+  var self = this;
+
   self.HttpServer.listen(self.port, self.bindTo, function(err) {
-    if (err & cb)  {
+    if (err)  {
       var errStr = 'RestApi error: '+inspect(err);
       debug(errStr);
-      return cb(new Error(errStr));
+      if (cb)
+        return cb(new Error(errStr));
+      else
+        return;
     }
     debug('REST API listening on port: '+self.port);
     if (cb)  cb();
   });
-}
+};
+
+/**
+ * Stops the server from acccepting new connections and listening on the port.
+ * @param {Function} [cb] The callback function. Optional.
+ */
+RestApi.prototype.stop = function(cb) {
+  var self = this;
+
+  if (!is.obj(self.HttpServer))
+    return asyncerr(new Error('There server is not running.'), cb);
+
+  self.HttpServer.close(function(err) {
+    if (err && cb) return cb(err);
+    if (cb) return cb();
+  });
+};
 
 /**
  * Add a route along with a function to run.
  * @param {String} verb HTTP verb for route.
  * @param {String} path A valid URI path.
- * @param {Function} fun A function to tun when teh path executes.
+ * @param {Function} func A function to run when the path executes.
+ * @return {Boolean|Error} True, if no errors on the parameters, Error
+ * otherwise.
+ * @return {Error|Boolean} true on success and Error on failure.
  */
 RestApi.prototype.addRoute = function(verb, path, func) {
+  var self = this;
 
-  if (!is.nonEmptyStr(verb)) {
-    return asyncerr(new Error('RestApi.prototype.addRoute bad verb: '+
-                       inspect(verb)), cb);
-  }
+  if (!is.nonEmptyStr(verb))
+    return new Error('Bad verb: '+inspect(verb));
 
-  if (!is.nonEmptyStr(path)) {
-    return asyncerr(new Error('RestApi.prototype.addRoute bad path: '+
-                              inspect(path)), cb);
-  }
+  if (!is.nonEmptyStr(path))
+    return new Error('RestApi.addRoute bad path: '+inspect(path));
 
-  if (!is.func(func)) {
-    return asyncerr(new Error('RestApi.prototype.addRoute bad func: '+
-                              inspect(func)), cb);
-  }
+  if (!is.func(func))
+    return new Error('RestApi.prototype.addRoute bad func: '+inspect(func));
 
   var httpVerb = verb.toUpperCase();
   debug('Adding: '+httpVerb+' '+path);
-  if (!this.routes[httpVerb])  this.routes[httpVerb] = {};
+  if (!self.routes[httpVerb])  self.routes[httpVerb] = {};
 
-  // Create a handling function for the route that gathers the 
+  // Create a handling function for the route that gathers the
   // the HTTP request body and passes that on.
-  this.routes[httpVerb][path] = function(req, res) {
+  self.routes[httpVerb][path] = function(req, res) {
     var body = '';   // buffer for body.
 
     // collect the body in buf;
@@ -104,6 +130,10 @@ RestApi.prototype.addRoute = function(verb, path, func) {
       res.setHeader('Content-Type', 'application/json');
       res.statusCode = 200;
 
+      // there may not be a body
+      if (body.length === 0) return func(req, res, {});
+
+      // there is a body, make sure it is valid, parsable JSON
       var taskInfo;
       try {
         taskInfo = JSON.parse(body);
@@ -116,5 +146,50 @@ RestApi.prototype.addRoute = function(verb, path, func) {
       func(req, res, taskInfo);
     });
   };
+  return true;
+};
+
+/**
+ * A method for the JsonServerResponse prototype to send json by passing an
+ * object.  Usage:  res.json([status|body], [body])
+ * @param {Number|Object} Optional. First argument may be either the status
+ * code or the object to stringify into JSON.
+ * @param {Object} Optional. If the first object is the status code, then the
+ * second optional argument, if present, is an object to serialize into JSON.
+ * @return {Boolean} true on success, false otherwise.
+ */
+http.ServerResponse.prototype.json = function(obj) {
+
+  if (arguments.length === 2) {
+    if (typeof arguments[1] === 'number') {
+      this.statusCode = arguments[1];
+    } else {
+      this.statusCode = obj;
+      obj = arguments[1];
+    }
+  }
+
+  if (!is.obj(obj)) {
+    debug('http.ServerResponse.json bad object param: '+inspect(obj));
+    return false;
+  }
+
+  if (!is.positiveInt(this.statusCode)) {
+    debug('http.ServerResponse.json bad status param: '+inspect(this.statusCode));
+    return false;
+  }
+
+  var str;
+  try {
+    str = JSON.stringify(obj);
+  } catch (err) {
+    debug('Error parsing JSON body: '+inspect(obj));
+    debug('Error err: '+inspect(err));
+    return false;
+  }
+
+  this.writeHead(this.statusCode, {'Content-Type': 'application/json'});
+  this.end(str, 'utf8');
+  return true;
 };
 
