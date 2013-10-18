@@ -17,6 +17,7 @@
     "maxlen"        : 110,
     "maxparams"     : 6,
     "maxstatements" : 100,
+    "multistr"      : true,
     "newcap"        : true,
     "noarg"         : true,
     "noempty"       : true,
@@ -29,6 +30,7 @@
     "undef"         : true,
     "unused"        : true,
     "strict"        : true,
+    "sub"           : true,
     "swindent"      : true,
     "trailing"      : true,
     "undef"         : true,
@@ -37,8 +39,12 @@
     "validthis"     : true,
 
     "globals" : {
-        "console"   : true,
-        "describe"  : true,
-        "it"        : true
+      "console"   : true,
+      "describe"  : true,
+      "it"        : true,
+      "before"    : true,
+      "beforeEach": true,
+      "expect"    : true,
+      "after"     : true
     }
 }
