@@ -127,6 +127,7 @@ RestApi.prototype.addRoute = function(verb, path, func) {
 
     // we have the body & header, no process.
     req.on('end', function () {
+      req.body = body;
       res.setHeader('Content-Type', 'application/json');
       res.statusCode = 200;
 
