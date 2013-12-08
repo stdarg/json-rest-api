@@ -15,7 +15,7 @@ method to the http.ServerResponse object called `json` (see below).
 ### server
 
     'use strict';
-    var JsonRestApi = require('../index').RestApi;
+    var JsonRestApi = require('json-rest-api').RestApi;
     var inspect = require('util').inspect;
     var debug = require('debug')('json-rest-api:example:server');
 
@@ -87,13 +87,15 @@ Add a route along with a function to run.
 * **Boolean|Error** True, if no errors on the parameters, Error
 * **Error|Boolean** true on success and Error on failure.
 
-### json(Optional., Optional.)
-A method for the JsonServerResponse prototype to send json by passing an
+### json([status code,] jsonObject.)
+A method for the JsonServerResponse prototype to send JSON by passing an
 object.
 
 #### Params:
-* **Number|Object** *Optional.* First argument may be either the status
-* **Object** *Optional.* If the first object is the status code, then the
+* **Number|Object** *Optional.* First argument may be either the status code or
+  the object to convert to JSON.
+* **Object** *Optional.* If the first object is the status code, then the second
+  param must be the object to convert to JSON.
 
 ## LICENSE
 
