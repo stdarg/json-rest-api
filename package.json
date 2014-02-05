@@ -1,10 +1,10 @@
 {
   "name": "json-rest-api",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A simple lightweight REST API that receives and responds to JSON HTTP requests, supports all verbs. Very simple.",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha --reporter list"
+    "test": "./node_modules/.bin/mocha --reporter list ./test.js"
   },
   "repository": {
     "type": "git",
@@ -24,12 +24,12 @@
     "url": "https://github.com/stdarg/json-rest-api/issues"
   },
   "dependencies": {
-    "async-err": "~0.0.0",
-    "debug": "~0.7.2",
-    "is2": "~0.0.5"
+    "async-err": "0.0.2",
+    "debug": "0.7.4",
+    "is2": "0.0.12"
   },
   "devDependencies": {
-    "mocha": "~1.13.0",
-    "request": "~2.27.0"
+    "mocha": "1.17.1",
+    "request": "2.33.0"
   }
 }
