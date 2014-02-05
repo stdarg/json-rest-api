@@ -1,5 +1,5 @@
 'use strict';
-var JsonRestApi = require('../index').RestApi;
+var JsonRestApi = require('./index').RestApi;
 var RestApi;
 var request = require('request');
 var inspect = require('util').inspect;

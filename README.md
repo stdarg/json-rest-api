@@ -1,14 +1,16 @@
 json-rest-api
 =============
-
 A lightweight REST API that receives and responds to JSON HTTP requests,
 supports all verbs. Expects JSON requests and responds in JSON via an added
 method to the http.ServerResponse object called `json` (see below).
 
+## Motivation
+Sometimes you want a simple REST API and don't need all the bells and whistles
+of express.js.
+
 ## Installation
 
     npm install json-rest-api
-
 
 ## Example
 
@@ -88,8 +90,7 @@ Add a route along with a function to run.
 * **Error|Boolean** true on success and Error on failure.
 
 ### json([status code,] jsonObject.)
-A method for the JsonServerResponse prototype to send JSON by passing an
-object.
+A method for the JsonServerResponse prototype to send JSON by passing an object.
 
 #### Params:
 * **Number|Object** *Optional.* First argument may be either the status code or
@@ -101,7 +102,7 @@ object.
 
 The MIT License (MIT)
 
-Copyright (c) 2013 Edmond Meinfelder
+Copyright (c) 2013,2014 Edmond Meinfelder
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
