@@ -15,7 +15,7 @@ var asyncerr = require('async-err');
 // set a default port to listen for requests
 var DEFAULT_PORT = process.env.PORT ? process.env.PORT : 44401;
 
-exports.RestApi = RestApi;
+module.exports = RestApi;
 
 /**
  * RestApi constructor. Creates the HTTP server objects and starts listening on
