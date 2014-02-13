@@ -29,30 +29,43 @@ exports.RestApi = RestApi;
  * @constructor
  */
 function RestApi(config, cb) {
-  var self = this;
-  self.routes = {};
+    var self = this;
+    self.routes = {};
 
-  self.bindTo = (config && config.bindTo) ? config.bindTo : undefined;
-  self.port = (config && config.port) ? config.port : DEFAULT_PORT;
+    self.bindTo = (config && config.bindTo) ? config.bindTo : undefined;
+    self.port = (config && config.port) ? config.port : DEFAULT_PORT;
 
-  // create the HTTP server object and on every request, try to match the
-  // request with a known route. If there is no match, return a 404 error.
-  self.HttpServer = http.createServer(function(req, res) {
-    var uriPath = url.parse(req.url).pathname;
-    // try to match the request & method with a handler
-    for (var path in self.routes[req.method]) {
-      if (path === uriPath) {
-        self.routes[req.method][path](req, res);
-        return;
-      }
-    }
+    // create the HTTP server object and on every request, try to match the
+    // request with a known route. If there is no match, return a 404 error.
+    self.HttpServer = http.createServer(function(req, res) {
+        var uriPath;
+        var queryStr;
+        var urlParts = url.parse(req.url, true);
+        if (is.obj(urlParts)) {
+            uriPath = urlParts.pathname || undefined;
+            queryStr = urlParts.query || undefined;
+            debug('queryStr: '+inspect(queryStr));
+        } else {
+            // no match was found, return a 404 error.
+            res.writeHead(400, {'Content-Type': 'application/json; charset=utf-8'});
+            res.end('{status:400, message:"Bad URI path."}', 'utf8');
+            return;
+        }
 
-    // no match was found, return a 404 error.
-    res.writeHead(404, {'Content-Type': 'application/json; charset=utf-8'});
-    res.end('{status:404, message:"Content not found."}', 'utf8');
-  });
+        // try to match the request & method with a handler
+        for (var path in self.routes[req.method]) {
+            if (path === uriPath) {
+                self.routes[req.method][path](req, res, queryStr);
+                return;
+            }
+        }
 
-  if (cb) self.listen(cb);
+        // no match was found, return a 404 error.
+        res.writeHead(404, {'Content-Type': 'application/json; charset=utf-8'});
+        res.end('{status:404, message:"Content not found."}', 'utf8');
+    });
+
+    if (cb) self.listen(cb);
 }
 
 /**
@@ -60,20 +73,20 @@ function RestApi(config, cb) {
  * @param {Function} [cb] An optional callback called when the server is ready.
  */
 RestApi.prototype.listen = function(cb) {
-  var self = this;
+    var self = this;
 
-  self.HttpServer.listen(self.port, self.bindTo, function(err) {
-    if (err)  {
-      var errStr = 'RestApi error: '+inspect(err);
-      debug(errStr);
-      if (cb)
-        return cb(new Error(errStr));
-      else
-        return;
-    }
-    debug('REST API listening on port: '+self.port);
-    if (cb)  cb();
-  });
+    self.HttpServer.listen(self.port, self.bindTo, function(err) {
+        if (err)    {
+            var errStr = 'RestApi error: '+inspect(err);
+            debug(errStr);
+            if (cb)
+                return cb(new Error(errStr));
+            else
+                return;
+        }
+        debug('REST API listening on port: '+self.port);
+        if (cb)    cb();
+    });
 };
 
 /**
@@ -81,15 +94,15 @@ RestApi.prototype.listen = function(cb) {
  * @param {Function} [cb] The callback function. Optional.
  */
 RestApi.prototype.stop = function(cb) {
-  var self = this;
+    var self = this;
 
-  if (!is.obj(self.HttpServer))
-    return asyncerr(new Error('There server is not running.'), cb);
+    if (!is.obj(self.HttpServer))
+        return asyncerr(new Error('There server is not running.'), cb);
 
-  self.HttpServer.close(function(err) {
-    if (err && cb) return cb(err);
-    if (cb) return cb();
-  });
+    self.HttpServer.close(function(err) {
+        if (err && cb) return cb(err);
+        if (cb) return cb();
+    });
 };
 
 /**
@@ -102,57 +115,58 @@ RestApi.prototype.stop = function(cb) {
  * @return {Error|Boolean} true on success and Error on failure.
  */
 RestApi.prototype.addRoute = function(verb, path, func) {
-  var self = this;
+    var self = this;
 
-  if (!is.nonEmptyStr(verb))
-    return new Error('Bad verb: '+inspect(verb));
+    if (!is.nonEmptyStr(verb))
+        return new Error('Bad verb: '+inspect(verb));
 
-  if (!is.nonEmptyStr(path))
-    return new Error('RestApi.addRoute bad path: '+inspect(path));
+    if (!is.nonEmptyStr(path))
+        return new Error('RestApi.addRoute bad path: '+inspect(path));
 
-  if (!is.func(func))
-    return new Error('RestApi.prototype.addRoute bad func: '+inspect(func));
+    if (!is.func(func))
+        return new Error('RestApi.prototype.addRoute bad func: '+inspect(func));
 
-  var httpVerb = verb.toUpperCase();
-  debug('Adding: '+httpVerb+' '+path);
-  if (!self.routes[httpVerb])  self.routes[httpVerb] = {};
+    var httpVerb = verb.toUpperCase();
+    debug('Adding: '+httpVerb+' '+path);
+    if (!self.routes[httpVerb])    self.routes[httpVerb] = {};
 
-  // Create a handling function for the route that gathers the
-  // the HTTP request body and passes that on.
-  self.routes[httpVerb][path] = function(req, res) {
-    var body = '';   // buffer for body.
+    // Create a handling function for the route that gathers the
+    // the HTTP request body and passes that on.
+    self.routes[httpVerb][path] = function(req, res, queryStr) {
+        var body = '';     // buffer for body.
 
-    // collect the body in buf;
-    req.on('data', function (data) { body += data.toString(); });
+        // collect the body in buf;
+        req.on('data', function (data) { body += data.toString(); });
 
-    // we have the body & header, no process.
-    req.on('end', function () {
-      req.body = body;
-      res.setHeader('Content-Type', 'application/json');
-      res.statusCode = 200;
+        // we have the body & header, now process.
+        req.on('end', function () {
+            req.body = body;
+            res.setHeader('Content-Type', 'application/json');
+            res.statusCode = 200;
 
-      // there may not be a body
-      if (body.length === 0) return func(req, res, {});
+            // there may not be a body
+            if (body.length === 0)
+                return func(req, res, {}, queryStr);
 
-      // there is a body, make sure it is valid, parsable JSON
-      var taskInfo;
-      try {
-        taskInfo = JSON.parse(body);
-      } catch (err) {
-        debug('Error parsing JSON body:',body);
-        res.statusCode = 400;
-        res.end('{"success": false, "msg": "Bad request."}', 'utf8');
-        return;
-      }
-      func(req, res, taskInfo);
-    });
-  };
-  return true;
+            // there is a body, make sure it is valid, parsable JSON
+            var jsonBody;
+            try {
+                jsonBody = JSON.parse(body);
+            } catch (err) {
+                debug('Error parsing JSON body:',body);
+                res.statusCode = 400;
+                res.end('{"success": false, "msg": "Bad request."}', 'utf8');
+                return;
+            }
+            func(req, res, jsonBody, queryStr);
+        });
+    };
+    return true;
 };
 
 /**
  * A method for the JsonServerResponse prototype to send json by passing an
- * object.  Usage:  res.json([status|body], [body])
+ * object.    Usage:    res.json([status|body], [body])
  * @param {Number|Object} Optional. First argument may be either the status
  * code or the object to stringify into JSON.
  * @param {Object} Optional. If the first object is the status code, then the
@@ -161,36 +175,36 @@ RestApi.prototype.addRoute = function(verb, path, func) {
  */
 http.ServerResponse.prototype.json = function(obj) {
 
-  if (arguments.length === 2) {
-    if (typeof arguments[1] === 'number') {
-      this.statusCode = arguments[1];
-    } else {
-      this.statusCode = obj;
-      obj = arguments[1];
+    if (arguments.length === 2) {
+        if (typeof arguments[1] === 'number') {
+            this.statusCode = arguments[1];
+        } else {
+            this.statusCode = obj;
+            obj = arguments[1];
+        }
     }
-  }
 
-  if (!is.obj(obj)) {
-    debug('http.ServerResponse.json bad object param: '+inspect(obj));
-    return false;
-  }
+    if (!is.obj(obj)) {
+        debug('http.ServerResponse.json bad object param: '+inspect(obj));
+        return false;
+    }
 
-  if (!is.positiveInt(this.statusCode)) {
-    debug('http.ServerResponse.json bad status param: '+inspect(this.statusCode));
-    return false;
-  }
+    if (!is.positiveInt(this.statusCode)) {
+        debug('http.ServerResponse.json bad status param: '+
+              inspect(this.statusCode));
+        return false;
+    }
 
-  var str;
-  try {
-    str = JSON.stringify(obj);
-  } catch (err) {
-    debug('Error parsing JSON body: '+inspect(obj));
-    debug('Error err: '+inspect(err));
-    return false;
-  }
+    var str;
+    try {
+        str = JSON.stringify(obj);
+    } catch (err) {
+        debug('Error parsing JSON body: '+inspect(obj));
+        debug('Error err: '+inspect(err));
+        return false;
+    }
 
-  this.writeHead(this.statusCode, {'Content-Type': 'application/json'});
-  this.end(str, 'utf8');
-  return true;
+    this.writeHead(this.statusCode, {'Content-Type': 'application/json'});
+    this.end(str, 'utf8');
+    return true;
 };
-
